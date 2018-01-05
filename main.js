@@ -51,7 +51,7 @@ client.on('connect', function(connection) {
 
                                 text = text.replace(regStart,"");
 
-                                let regNearest = /(の最寄り|から一番近い).*$/i
+                                let regNearest = /(の最寄り|から(一|1|１)番近い).*$/i
                                 if (text.match(regNearest)) {
                                     if (text.match(/(なか卯)/i)) {
                                         var placename = text.replace(regNearest,"");
