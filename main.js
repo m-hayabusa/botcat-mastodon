@@ -41,7 +41,9 @@ client.on('connect', function(connection) {
                                 }
                             }
 
-                            let regStart = /(猫|ねこ|Cat)(Bot|ぼっと)、?/i
+                            text = text.replace(/<("[^"]*"|'[^']*'|[^'">])*>/g,"");
+                            let regStart = /(@cat |(猫|ねこ|Cat)(Bot|ぼっと))、?/i
+                            console.log(text);
 
                              //メイン部分
                              if (text.match(regStart)) {
