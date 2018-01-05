@@ -46,7 +46,9 @@ client.on('connect', function(connection) {
 
                              //メイン部分
                              if (text.match(regStart)) {
+                                rt(json['id']);
                                 fav(json['id']);
+
                                 text = text.replace(regStart,"");
 
                                 let regNearest = /(の最寄り|から一番近い).*$/i
@@ -58,6 +60,13 @@ client.on('connect', function(connection) {
                                         console.log("result= "+result);
                                         post("@"+acct+" "+result, {in_reply_to_id: json['id']}, json['visibility']);
                                         console.log("最寄り: なか卯:\t"+acct+"\t場所: "+placename);
+                                    } else if (text.match(/(すき家)/i)) {
+                                        var placename = text.replace(regNearest,"");
+                                        var exec = require('child_process').execSync;
+                                        var result = exec('cd ./sukiya;'+'echo '+ placename +' | lua ./main.lua');
+                                        console.log("result= "+result);
+                                        post("@"+acct+" "+result, {in_reply_to_id: json['id']}, json['visibility']);
+                                        console.log("最寄り: すき家:\t"+acct+"\t場所: "+placename);
                                     } else {
                                         console.log("最寄り: 不明:\t"+acct+"\t " + text);
                                     }

@@ -6,5 +6,6 @@ Thumbs.db
 node_modules/
 
 nakau/lib
+sukiya/lib
 
 config.js
