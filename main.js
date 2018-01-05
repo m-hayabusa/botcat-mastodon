@@ -68,6 +68,7 @@ client.on('connect', function(connection) {
                                         post("@"+acct+" "+result, {in_reply_to_id: json['id']}, json['visibility']);
                                         console.log("最寄り: すき家:\t"+acct+"\t場所: "+placename);
                                     } else {
+                                        post("@"+acct+" えっ\n\n・・・えっ？", {in_reply_to_id: json['id']},json['visibility']);
                                         console.log("最寄り: 不明:\t"+acct+"\t " + text);
                                     }
                                 }
