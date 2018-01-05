@@ -5,4 +5,6 @@ Thumbs.db
 
 node_modules/
 
+nakau/lib
+
 config.js
