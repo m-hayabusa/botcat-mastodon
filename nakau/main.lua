@@ -5,61 +5,44 @@
 -- Time: 13:57
 -- To change this template use File | Settings | File Templates.
 --
-main = function()
 debug = false
 
-    local placename = "江ノ島"
-    placename = io.read()
+local http    = require ("socket.http")
+package.path = package.path..";./lib/xml2lua/?.lua"
+package.cpath = package.cpath .. ";./lib/lua-iconv-7/?.so;"
+require ("xml2lua")
 
-    local http    = require ("socket.http")
-    package.path = package.path..";./lib/xml2lua/?.lua"
-    package.cpath = package.cpath .. ";./lib/lua-iconv-7/?.so;"
-    require ("xml2lua")
+urlencode = function(str)
+    if (str) then
+        str = string.gsub(str, "\n", "\r\n")
+        str = string.gsub(str, "([^%w ])",
+            function(c)
+                return string.format("%%%02X",string.byte(c))
+            end)
+        str = string.gsub (str, " ", "+")
+        str = string.gsub (str, "%%2E",".")
+        str = string.gsub (str, "%%28","(")
+        str = string.gsub (str, "%%29",")")
+    end
+    return str
+end
 
-    urlencode = function(str)
-        if (str) then
-            str = string.gsub(str, "\n", "\r\n")
-            str = string.gsub(str, "([^%w ])",
-                function(c)
-                    return string.format("%%%02X",string.byte(c))
-                end)
-            str = string.gsub (str, " ", "+")
-            str = string.gsub (str, "%%2E",".")
-            str = string.gsub (str, "%%28","(")
-            str = string.gsub (str, "%%29",")")
-        end
-        return str
+
+getLatLon = function(placename)
+
+    if placename == nil then
+        return nil
     end
 
     -- GeoNamesで地名をキーにして取得
     local xml = http.request("http://api.geonames.org/postalCodeSearch?maxRows=1&username=hayabusa&placename="..urlencode(placename))
-
-    -- local xml = [[
-    -- <geonames>
-    -- <totalResultsCount>2</totalResultsCount>
-    -- <code>
-    -- <postalcode>251-0036</postalcode>
-    -- <name>Enoshima</name>
-    -- <countryCode>JP</countryCode>
-    -- <lat>35.30117</lat>
-    -- <lng>139.48125</lng>
-    -- <adminCode1>19</adminCode1>
-    -- <adminName1>Kanagawa Ken</adminName1>
-    -- <adminCode2>1864091</adminCode2>
-    -- <adminName2>Fujisawa Shi</adminName2>
-    -- <adminCode3/>
-    -- <adminName3/>
-    -- </code>
-    -- </geonames>
-    -- ]]
 
     local handler = require("xmlhandler.tree")
     local parser = xml2lua.parser(handler)
     parser:parse(xml)
 
     if (handler.root.geonames.totalResultsCount == 0 or handler.root.geonames.code == nil) then
-        print("それは・・・どこですか？")
-        os.exit(0)
+        return nil
     end
 
     if debug then
@@ -68,8 +51,15 @@ debug = false
         end
     end
 
-    lng = handler.root.geonames.code.lng
-    lat = handler.root.geonames.code.lat
+    return handler.root.geonames.code.lat, handler.root.geonames.code.lng
+end
+
+main = function(placename)
+    local lat, lng = getLatLon(placename)
+
+    if lat == nil or lng == nil then
+        return {2, "それは・・・どこですか？"}
+    end
 
     if debug then
         print("lat: " .. lat)
@@ -99,8 +89,6 @@ debug = false
     local iconv = require("iconv")
     cd = iconv.new("UTF-8", "EUC-JP")
     htm = cd:iconv(htm)
-
-    --local htm = [[ZdcEmapHttpResult[18] = '<div id="kyotenList">\n\t<div id="kyotenListHd">\n\t\t<table id="kyotenListHeader">\n\t\t\t<tr>\n\t\t\t\t<td class="kyotenListTitle">最寄り店舗一覧</td>\n\t\t\t</tr>\n\t\t</table>\n\t</div>\n\t<div id="kyotenListDt">\n\t\t<table id="kyotenListTable">\n\t\t\t\t\t\t<tr>\n\t\t\t\t<td>\n\t\t\t\t\t<div class="kyotenListName">\n\t\t\t\t\t\t<img src="http://maps.nakau.co.jp/cgi/icon_select.cgi?cid=zen000&icon_id=50" />\n\t\t\t\t\t\t&nbsp;\n\t\t\t\t\t\t<a href="http://maps.nakau.co.jp/p/zen009/dtl/ID0200454/?&cond1=1&cond2=1&&his=nm&srchplace=,35.30117,139.48125"\n\t\t\t\t\t\tonMouseOver="ZdcEmapMapCursorSet(\'35.3357217\',\'139.4884031\');ZdcEmapMapFrontShopMrk(0);" onMouseOut="ZdcEmapMapCursorRemove();"\n\t\t\t\t\t\t>\n\t\t\t\t\t\t藤沢駅北口店\n\t\t\t\t\t\t</a>\n\t\t\t\t\t\t\n\t\t\t\t\t</div>\n\t\t\t\t\t\t\t\t\t\t<div class="kyotenListData">\n\t\t\t\t\t\t\t\t\t\t\t\t〒251-0052&nbsp;\n\t\t\t\t\t\t\t\t\t\t\t\t神奈川県藤沢市藤沢438-6FIC藤沢ﾋﾞﾙ1F\n\t\t\t\t\t</div>\n\t\t\t\t\t\t\t\t\t\t<div class="kyotenListData">\n\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t<img src="http://maps.nakau.co.jp/cgi/sys_icon_select.cgi?cid=zen000&icon_id=028" alt="デザート" title="デザート">\n\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t<img src="http://maps.nakau.co.jp/cgi/sys_icon_select.cgi?cid=zen000&icon_id=029" alt="朝食" title="朝食">\n\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t<img src="http://maps.nakau.co.jp/cgi/sys_icon_select.cgi?cid=zen000&icon_id=036" alt="定食" title="定食">\n\t\t\t\t\t\t\t\t\t\t\t\t<br>\n\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t<img src="http://maps.nakau.co.jp/cgi/sys_icon_select.cgi?cid=zen000&icon_id=0412" alt="禁煙" title="禁煙">\n\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t</div>\n\t\t\t\t</td>\n\t\t\t</tr>\n\t\t\t\t\t<tr>\n\t\t\t\t<td>\n\t\t\t\t\t<div class="kyotenListName">\n\t\t\t\t\t\t<img src="http://maps.nakau.co.jp/cgi/icon_select.cgi?cid=zen000&icon_id=50" />\n\t\t\t\t\t\t&nbsp;\n\t\t\t\t\t\t<a href="http://maps.nakau.co.jp/p/zen009/dtl/ID0200087/?&cond1=1&cond2=1&&his=nm&srchplace=,35.30117,139.48125"\n\t\t\t\t\t\tonMouseOver="ZdcEmapMapCursorSet(\'35.3335131\',\'139.4514869\');ZdcEmapMapFrontShopMrk(1);" onMouseOut="ZdcEmapMapCursorRemove();"\n\t\t\t\t\t\t>\n\t\t\t\t\t\t辻堂店\n\t\t\t\t\t\t</a>\n\t\t\t\t\t\t\n\t\t\t\t\t</div>\n\t\t\t\t\t\t\t\t\t\t<div class="kyotenListData">\n\t\t\t\t\t\t\t\t\t\t\t\t〒251-0047&nbsp;\n\t\t\t\t\t\t\t\t\t\t\t\t神奈川県藤沢市辻堂1-1-10\n\t\t\t\t\t</div>\n\t\t\t\t\t\t\t\t\t\t<div class="kyotenListData">\n\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t<img src="http://maps.nakau.co.jp/cgi/sys_icon_select.cgi?cid=zen000&icon_id=028" alt="デザート" title="デザート">\n\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t<img src="http://maps.nakau.co.jp/cgi/sys_icon_select.cgi?cid=zen000&icon_id=029" alt="朝食" title="朝食">\n\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t<img src="http://maps.nakau.co.jp/cgi/sys_icon_select.cgi?cid=zen000&icon_id=036" alt="定食" title="定食">\n\t\t\t\t\t\t\t\t\t\t\t\t<br>\n\t\t\t\t\t\t\t\t\t\t\t\t<img src="http://maps.nakau.co.jp/cgi/sys_icon_select.cgi?cid=zen000&icon_id=039" alt="24時間営業" title="24時間営業">\n\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t<img src="http://maps.nakau.co.jp/cgi/sys_icon_select.cgi?cid=zen000&icon_id=0412" alt="禁煙" title="禁煙">\n\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t</div>\n\t\t\t\t</td>\n\t\t\t</tr>\n\t\t\t\t\t<tr>\n\t\t\t\t<td>\n\t\t\t\t\t<div class="kyotenListName">\n\t\t\t\t\t\t<img src="http://maps.nakau.co.jp/cgi/icon_select.cgi?cid=zen000&icon_id=50" />\n\t\t\t\t\t\t&nbsp;\n\t\t\t\t\t\t<a href="http://maps.nakau.co.jp/p/zen009/dtl/ID0200256/?&cond1=1&cond2=1&&his=nm&srchplace=,35.30117,139.48125"\n\t\t\t\t\t\tonMouseOver="ZdcEmapMapCursorSet(\'35.3327425\',\'139.4058861\');ZdcEmapMapFrontShopMrk(2);" onMouseOut="ZdcEmapMapCursorRemove();"\n\t\t\t\t\t\t>\n\t\t\t\t\t\tイオン茅ヶ崎中央店\n\t\t\t\t\t\t</a>\n\t\t\t\t\t\t\n\t\t\t\t\t</div>\n\t\t\t\t\t\t\t\t\t\t<div class="kyotenListData">\n\t\t\t\t\t\t\t\t\t\t\t\t〒253-0041&nbsp;\n\t\t\t\t\t\t\t\t\t\t\t\t神奈川県茅ヶ崎市茅ヶ崎3-5-16イオン茅ヶ崎中央店内\n\t\t\t\t\t</div>\n\t\t\t\t\t\t\t\t\t\t<div class="kyotenListData">\n\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t<img src="http://maps.nakau.co.jp/cgi/sys_icon_select.cgi?cid=zen000&icon_id=027" alt="お子様メニュー" title="お子様メニュー">\n\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t<img src="http://maps.nakau.co.jp/cgi/sys_icon_select.cgi?cid=zen000&icon_id=028" alt="デザート" title="デザート">\n\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t<img src="http://maps.nakau.co.jp/cgi/sys_icon_select.cgi?cid=zen000&icon_id=036" alt="定食" title="定食">\n\t\t\t\t\t\t\t\t\t\t\t\t<br>\n\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t<img src="http://maps.nakau.co.jp/cgi/sys_icon_select.cgi?cid=zen000&icon_id=0412" alt="禁煙" title="禁煙">\n\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t</div>\n\t\t\t\t</td>\n\t\t\t</tr>\n\t\t\t\t\t<tr>\n\t\t\t\t<td>\n\t\t\t\t\t<div class="kyotenListName">\n\t\t\t\t\t\t<img src="http://maps.nakau.co.jp/cgi/icon_select.cgi?cid=zen000&icon_id=50" />\n\t\t\t\t\t\t&nbsp;\n\t\t\t\t\t\t<a href="http://maps.nakau.co.jp/p/zen009/dtl/ID0200201/?&cond1=1&cond2=1&&his=nm&srchplace=,35.30117,139.48125"\n\t\t\t\t\t\tonMouseOver="ZdcEmapMapCursorSet(\'35.3244719\',\'139.3502569\');ZdcEmapMapFrontShopMrk(3);" onMouseOut="ZdcEmapMapCursorRemove();"\n\t\t\t\t\t\t>\n\t\t\t\t\t\t平塚西口店\n\t\t\t\t\t\t</a>\n\t\t\t\t\t\t\n\t\t\t\t\t</div>\n\t\t\t\t\t\t\t\t\t\t<div class="kyotenListData">\n\t\t\t\t\t\t\t\t\t\t\t\t〒254-0043&nbsp;\n\t\t\t\t\t\t\t\t\t\t\t\t神奈川県平塚市紅谷町16-2平塚西口会館\n\t\t\t\t\t</div>\n\t\t\t\t\t\t\t\t\t\t<div class="kyotenListData">\n\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t<img src="http://maps.nakau.co.jp/cgi/sys_icon_select.cgi?cid=zen000&icon_id=028" alt="デザート" title="デザート">\n\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t<img src="http://maps.nakau.co.jp/cgi/sys_icon_select.cgi?cid=zen000&icon_id=029" alt="朝食" title="朝食">\n\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t<img src="http://maps.nakau.co.jp/cgi/sys_icon_select.cgi?cid=zen000&icon_id=036" alt="定食" title="定食">\n\t\t\t\t\t\t\t\t\t\t\t\t<br>\n\t\t\t\t\t\t\t\t\t\t\t\t<img src="http://maps.nakau.co.jp/cgi/sys_icon_select.cgi?cid=zen000&icon_id=039" alt="24時間営業" title="24時間営業">\n\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t<img src="http://maps.nakau.co.jp/cgi/sys_icon_select.cgi?cid=zen000&icon_id=0412" alt="禁煙" title="禁煙">\n\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t</div>\n\t\t\t\t</td>\n\t\t\t</tr>\n\t\t\t\t\t<tr>\n\t\t\t\t<td>\n\t\t\t\t\t<div class="kyotenListName">\n\t\t\t\t\t\t<img src="http://maps.nakau.co.jp/cgi/icon_select.cgi?cid=zen000&icon_id=50" />\n\t\t\t\t\t\t&nbsp;\n\t\t\t\t\t\t<a href="http://maps.nakau.co.jp/p/zen009/dtl/ID0200049/?&cond1=1&cond2=1&&his=nm&srchplace=,35.30117,139.48125"\n\t\t\t\t\t\tonMouseOver="ZdcEmapMapCursorSet(\'35.3211717\',\'139.3342567\');ZdcEmapMapFrontShopMrk(4);" onMouseOut="ZdcEmapMapCursorRemove();"\n\t\t\t\t\t\t>\n\t\t\t\t\t\t湘南大磯店\n\t\t\t\t\t\t</a>\n\t\t\t\t\t\t\n\t\t\t\t\t</div>\n\t\t\t\t\t\t\t\t\t\t<div class="kyotenListData">\n\t\t\t\t\t\t\t\t\t\t\t\t〒255-0001&nbsp;\n\t\t\t\t\t\t\t\t\t\t\t\t神奈川県中郡大磯町高麗3-4-16\n\t\t\t\t\t</div>\n\t\t\t\t\t\t\t\t\t\t<div class="kyotenListData">\n\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t<img src="http://maps.nakau.co.jp/cgi/sys_icon_select.cgi?cid=zen000&icon_id=028" alt="デザート" title="デザート">\n\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t<img src="http://maps.nakau.co.jp/cgi/sys_icon_select.cgi?cid=zen000&icon_id=029" alt="朝食" title="朝食">\n\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t<img src="http://maps.nakau.co.jp/cgi/sys_icon_select.cgi?cid=zen000&icon_id=036" alt="定食" title="定食">\n\t\t\t\t\t\t\t\t\t\t\t\t<br>\n\t\t\t\t\t\t\t\t\t\t\t\t<img src="http://maps.nakau.co.jp/cgi/sys_icon_select.cgi?cid=zen000&icon_id=039" alt="24時間営業" title="24時間営業">\n\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t<img src="http://maps.nakau.co.jp/cgi/sys_icon_select.cgi?cid=zen000&icon_id=0412" alt="禁煙" title="禁煙">\n\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t<img src="http://maps.nakau.co.jp/cgi/sys_icon_select.cgi?cid=zen000&icon_id=048" alt="駐車場" title="駐車場">\n\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t</div>\n\t\t\t\t</td>\n\t\t\t</tr>\n\t\t\t\t</table>\n\t</div>\n\t<div class="custKyotenListHd">\n\t\t<table class="custKyotenListHeader">\n\t\t\t<tr>\n\t\t\t\t<td class="custKyotenListPage">\n\t\t\t\t\t\t\t\t\t\t1-5件/10件中\n\t\t\t\t\t\t\t\t\t\t&nbsp;<input type="button" class="custPageButton" onClick="javascript:ZdcEmapSearchShopListClick(1);" value="次へ" />\n\t\t\t\t\t\t\t\t\t</td>\n\t\t\t</tr>\n\t\t</table>\n\t</div>\n</div>\n';]]
 
     htm = string.gsub(htm, "ZdcEmapHttpResult%[[0-9]-%]% %=% %'<div% id%=\"kyotenList\">\\n\\t<div% id%=\"kyotenListHd\">\\n\\t\\t<table% id%=\"kyotenListHeader\">\\n\\t\\t\\t<tr>\\n\\t\\t\\t\\t<td% class%=\"kyotenListTitle\">最寄り店舗一覧</td>\\n\\t\\t\\t</tr>\\n\\t\\t</table>\\n\\t</div>\\n\\t<div% id%=\"kyotenListDt\">\\n\\t\\t","")
     htm = string.gsub(htm, "\\n\\t</div>\\n\\t<div% class%=\"custKyotenListHd\">\\n\\t\\t<table% class%=\"custKyotenListHeader\">\\n\\t\\t\\t<tr>\\n\\t\\t\\t\\t<td% class%=\"custKyotenListPage\">\\n\\t\\t\\t\\t\\t\\t\\t\\t\\t\\t1%-5件/10件中\\n\\t\\t\\t\\t\\t\\t\\t\\t\\t\\t%&nbsp;<input% type%=\"button\"% class%=\"custPageButton\"% onClick%=\"javascript%:ZdcEmapSearchShopListClick%(1%);\"% value%=\"次へ\"% />\\n\\t\\t\\t\\t\\t\\t\\t\\t\\t</td>\\n\\t\\t\\t</tr>\\n\\t\\t</table>\\n\\t</div>\\n</div>\\n%';$", '')
@@ -145,18 +133,19 @@ debug = false
         local parser = xml2lua.parser(handler)
         parser:parse(htm)
 
-        print (placename .. "(" .. handler.root.geonames.code.countryCode .. " " .. handler.root.geonames.code.adminName1 .. " " .. handler.root.geonames.code.adminName2 .. ") の最寄りのなか卯は、"..handler.root.nakau.kyoten[1].name.."で、".."以下のものを取り扱っています： ")
+        local ret = placename .. "(" .. handler.root.geonames.code.countryCode .. " " .. handler.root.geonames.code.adminName1 .. " " .. handler.root.geonames.code.adminName2 .. ") の最寄りのなか卯は、"..handler.root.nakau.kyoten[1].name.."で、".."以下のものを取り扱っています： "
 
         for l, w in pairs(handler.root.nakau.kyoten[1].list.data) do
-            print (w)
+            ret = ret .. w .. "、 "
         end
 
-        print ("場所は、"..handler.root.nakau.kyoten[1].address.."で、URLは "..handler.root.nakau.kyoten[1].url.." です")
-        os.exit(0)
+        ret = ret .. "\n場所は、"..handler.root.nakau.kyoten[1].address.."で、URLは "..handler.root.nakau.kyoten[1].url.." です。"
+        return {0, ret}
     else
-        print ("ごめんなさい・・・。 "..placename .. "(" .. handler.root.geonames.code.countryCode .. " " .. handler.root.geonames.code.adminName1 .. " " .. handler.root.geonames.code.adminName2 .. ") の最寄りのなか卯は見つけられませんでした・・・。")
-        os.exit(0)
+        local ret = "ごめんなさい・・・。 "..placename .. "(" .. handler.root.geonames.code.countryCode .. " " .. handler.root.geonames.code.adminName1 .. " " .. handler.root.geonames.code.adminName2 .. ") の最寄りのなか卯は見つけられませんでした・・・。"
+        return {1, ret}
     end
 end
 
-main()
+local ret = main(io.read())
+print(ret[1].." "..ret[2])

@@ -5,30 +5,33 @@
 -- Time: 13:57
 -- To change this template use File | Settings | File Templates.
 --
-main = function()
 debug = false
 
-    local placename = "江ノ島"
-    placename = io.read()
+local http    = require ("socket.http")
+package.path = package.path..";./lib/xml2lua/?.lua"
+package.cpath = package.cpath .. ";./lib/lua-iconv-7/?.so;"
+require ("xml2lua")
 
-    local http    = require ("socket.http")
-    package.path = package.path..";./lib/xml2lua/?.lua"
-    package.cpath = package.cpath .. ";./lib/lua-iconv-7/?.so;"
-    require ("xml2lua")
+urlencode = function(str)
+    if (str) then
+        str = string.gsub(str, "\n", "\r\n")
+        str = string.gsub(str, "([^%w ])",
+            function(c)
+                return string.format("%%%02X",string.byte(c))
+            end)
+        str = string.gsub (str, " ", "+")
+        str = string.gsub (str, "%%2E",".")
+        str = string.gsub (str, "%%28","(")
+        str = string.gsub (str, "%%29",")")
+    end
+    return str
+end
 
-    urlencode = function(str)
-        if (str) then
-            str = string.gsub(str, "\n", "\r\n")
-            str = string.gsub(str, "([^%w ])",
-                function(c)
-                    return string.format("%%%02X",string.byte(c))
-                end)
-            str = string.gsub (str, " ", "+")
-            str = string.gsub (str, "%%2E",".")
-            str = string.gsub (str, "%%28","(")
-            str = string.gsub (str, "%%29",")")
-        end
-        return str
+
+getLatLon = function(placename)
+
+    if placename == nil then
+        return nil
     end
 
     -- GeoNamesで地名をキーにして取得
@@ -39,8 +42,7 @@ debug = false
     parser:parse(xml)
 
     if (handler.root.geonames.totalResultsCount == 0 or handler.root.geonames.code == nil) then
-        print("それは・・・どこですか？")
-        os.exit(0)
+        return nil
     end
 
     if debug then
@@ -49,8 +51,15 @@ debug = false
         end
     end
 
-    lng = handler.root.geonames.code.lng
-    lat = handler.root.geonames.code.lat
+    return handler.root.geonames.code.lat, handler.root.geonames.code.lng
+end
+
+main = function(placename)
+    local lat, lng = getLatLon(placename)
+
+    if lat == nil or lng == nil then
+        return {2, "それは・・・どこですか？"}
+    end
 
     if debug then
         print("lat: " .. lat)
@@ -75,9 +84,6 @@ debug = false
     --print("cgi_url: "..cgi_url)
 
     local htm = http.request(cgi_url)
-    if debug then
-      print(htm)
-    end
 
      --　CGIから帰ってくるのがEUC-JPなのでUTF-8に変換
     local iconv = require("iconv")
@@ -95,7 +101,7 @@ debug = false
     htm = string.gsub(htm, "onMouse.-;\"", '')
     htm = string.gsub(htm, "onClick.-;\"", '')
     htm = string.gsub(htm, "<table% id%=\"kyotenListTable\">(.-)</table>", '<sukiya>%1</sukiya>')
-    htm = string.gsub(htm, "<img% src%=\"http%://maps.sukiya.jp/cgi/icon_select.cgi%?cid%=zen000&icon_id=50\" />", '') -- なか卯のロゴ
+    htm = string.gsub(htm, "<img% src%=\"http%://maps.sukiya.jp/cgi/icon_select.cgi%?cid%=zen000&icon_id=50\" />", '') -- すき家のロゴ
     htm = string.gsub(htm, "<tr>% <td>% <div% class%=\"kyotenListName\">(.-)</td>% </tr>", "<kyoten>%1</kyoten>") -- tr td divを１タグに
     htm = string.gsub(htm, "\"% >", "\">")
 
@@ -127,18 +133,19 @@ debug = false
         local parser = xml2lua.parser(handler)
         parser:parse(htm)
 
-        print (placename .. "(" .. handler.root.geonames.code.countryCode .. " " .. handler.root.geonames.code.adminName1 .. " " .. handler.root.geonames.code.adminName2 .. ") の最寄りのすき家は、"..handler.root.sukiya.kyoten[1].name.."で、".."以下のものを取り扱っています： ")
+        local ret = placename .. "(" .. handler.root.geonames.code.countryCode .. " " .. handler.root.geonames.code.adminName1 .. " " .. handler.root.geonames.code.adminName2 .. ") の最寄りのすき家は、"..handler.root.sukiya.kyoten[1].name.."で、".."以下のものを取り扱っています： "
 
         for l, w in pairs(handler.root.sukiya.kyoten[1].list.data) do
-            print (w)
+            ret = ret .. w .. "、 "
         end
 
-        print ("場所は、"..handler.root.sukiya.kyoten[1].address.."で、URLは "..handler.root.sukiya.kyoten[1].url.." です")
-        os.exit(0)
+        ret = ret .. "\n場所は、"..handler.root.sukiya.kyoten[1].address.."で、URLは "..handler.root.sukiya.kyoten[1].url.." です。"
+        return {0, ret}
     else
-        print ("ごめんなさい・・・。 "..placename .. "(" .. handler.root.geonames.code.countryCode .. " " .. handler.root.geonames.code.adminName1 .. " " .. handler.root.geonames.code.adminName2 .. ") の最寄りのすき家は見つけられませんでした・・・。")
-        os.exit(0)
+        local ret = "ごめんなさい・・・。 "..placename .. "(" .. handler.root.geonames.code.countryCode .. " " .. handler.root.geonames.code.adminName1 .. " " .. handler.root.geonames.code.adminName2 .. ") の最寄りのすき家は見つけられませんでした・・・。"
+        return {1, ret}
     end
 end
 
-main()
+local ret = main(io.read())
+print(ret[1].." "..ret[2])
