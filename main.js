@@ -71,6 +71,27 @@ client.connect("wss://" + config.domain + "/api/v1/streaming/?access_token=" + c
 
 
 // ここからいろいろ
+function fav(id) {
+    fetch("https://" + config.domain + "/api/v1/statuses/"+id+"/favourite", {
+        headers: {'content-type': 'application/json', 'Authorization': 'Bearer '+config.token},
+        method: 'POST'
+    }).then(function(response) {
+        if(response.ok) {
+            return response.json();
+        } else {
+            throw new Error();
+        }
+    }).then(function(json) {
+        if (json["id"]) {
+            console.log("OK:Fav");
+        } else {
+            console.warn("NG:Fav:"+json);
+        }
+    }).catch(function(error) {
+        console.warn("NG:Fav:SERVER");
+    });
+}
+
 function rt(id) {
     fetch("https://" + config.domain + "/api/v1/statuses/"+id+"/reblog", {
         headers: {'content-type': 'application/json', 'Authorization': 'Bearer '+config.token},
