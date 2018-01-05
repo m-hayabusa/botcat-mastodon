@@ -5,7 +5,7 @@ Thumbs.db
 
 node_modules/
 
-nakau/lib
-sukiya/lib
+*/lib/
+
 
 config.js
