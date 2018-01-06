@@ -87,8 +87,8 @@ main = function(placename)
     cd = iconv.new("UTF-8", "EUC-JP")
     htm = cd:iconv(htm)
 
-    htm = string.gsub(htm, "ZdcEmapHttpResult%[[0-9]-%]% %=% %'<div% id%=\"kyotenList\">\\n\\t<div% id%=\"kyotenListHd\">\\n\\t\\t<table% id%=\"kyotenListHeader\">\\n\\t\\t\\t<tr>\\n\\t\\t\\t\\t<td% class%=\"kyotenListTitle\">最寄り店舗一覧</td>\\n\\t\\t\\t</tr>\\n\\t\\t</table>\\n\\t</div>\\n\\t<div% id%=\"kyotenListDt\">\\n\\t\\t","")
-    htm = string.gsub(htm, "\\n\\t</div>\\n\\t<div% class%=\"custKyotenListHd\">\\n\\t\\t<table% class%=\"custKyotenListHeader\">\\n\\t\\t\\t<tr>\\n\\t\\t\\t\\t<td% class%=\"custKyotenListPage\">\\n\\t\\t\\t\\t\\t\\t\\t\\t\\t\\t1%-5件/10件中\\n\\t\\t\\t\\t\\t\\t\\t\\t\\t\\t%&nbsp;<input% type%=\"button\"% class%=\"custPageButton\"% onClick%=\"javascript%:ZdcEmapSearchShopListClick%(1%);\"% value%=\"次へ\"% />\\n\\t\\t\\t\\t\\t\\t\\t\\t\\t</td>\\n\\t\\t\\t</tr>\\n\\t\\t</table>\\n\\t</div>\\n</div>\\n%';$", '')
+    htm = string.gsub(htm, "^.*<div% id%=\"kyotenListDt\">\\n\\t\\t","")
+    htm = string.gsub(htm, "\\n\\t</div>\\n\\t<div% class%=\"custKyotenListHd\">\\n\\t\\t<table% class%=\"custKyotenListHeader\">.*$", '')
 
     -- 邪魔なものを消す
     htm = string.gsub(htm, "\\n", ' ')
