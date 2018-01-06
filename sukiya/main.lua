@@ -27,35 +27,32 @@ urlencode = function(str)
     return str
 end
 
-
-getLatLon = function(placename)
-
+getLocation = function(placename)
     if placename == nil then
         return nil
     end
 
-    -- GeoNamesで地名をキーにして取得
-    local xml = http.request("http://api.geonames.org/postalCodeSearch?maxRows=1&username=hayabusa&placename="..urlencode(placename))
-
+    -- Yahoo! Weather APIで地名をキーにして取得
+    local xml = http.request("https://query.yahooapis.com/v1/public/yql?q=select%20*%20from%20weather.forecast%20where%20woeid%20in%20(select%20woeid%20from%20geo.places(1)%20where%20text=\""..urlencode(placename)..'")')
     local handler = require("xmlhandler.tree")
     local parser = xml2lua.parser(handler)
+    xml = string.gsub(xml,"yweather:","yweather_") --テーブル名に:が入ってめんどくさい
+    xml = string.gsub(xml,"geo:","geo_") --テーブル名に:が入ってめんどくさい
     parser:parse(xml)
 
-    if (handler.root.geonames.totalResultsCount == 0 or handler.root.geonames.code == nil) then
+    if handler.root.query.results.channel == nil then
         return nil
     end
 
-    if debug then
-        for k, v in pairs(handler.root.geonames.code) do
-            print (k, v)
-        end
-    end
-
-    return handler.root.geonames.code.lat, handler.root.geonames.code.lng
+    return handler.root.query.results.channel.item.geo_lat[1],handler.root.query.results.channel.item.geo_long[1], handler.root.query.results.channel.yweather_location._attr.country.." "..handler.root.query.results.channel.yweather_location._attr.region.." "..handler.root.query.results.channel.yweather_location._attr.city
 end
 
 main = function(placename)
-    local lat, lng = getLatLon(placename)
+    local lat, lng, location= getLocation(placename)
+
+    if location == nil then
+        location = "❔"
+    end
 
     if lat == nil or lng == nil then
         return {2, "それは・・・どこですか？"}
@@ -133,7 +130,7 @@ main = function(placename)
         local parser = xml2lua.parser(handler)
         parser:parse(htm)
 
-        local ret = placename .. "(" .. handler.root.geonames.code.countryCode .. " " .. handler.root.geonames.code.adminName1 .. " " .. handler.root.geonames.code.adminName2 .. ") の最寄りのすき家は、"..handler.root.sukiya.kyoten[1].name.."で、".."以下のものを取り扱っています： "
+        local ret = placename .. "(" ..location .. ") の最寄りのすき家は、"..handler.root.sukiya.kyoten[1].name.."で、".."以下のものを取り扱っています： "
 
         for l, w in pairs(handler.root.sukiya.kyoten[1].list.data) do
             ret = ret .. w .. "、 "
@@ -142,7 +139,7 @@ main = function(placename)
         ret = ret .. "\n場所は、"..handler.root.sukiya.kyoten[1].address.."で、URLは "..handler.root.sukiya.kyoten[1].url.." です。"
         return {0, ret}
     else
-        local ret = "ごめんなさい・・・。 "..placename .. "(" .. handler.root.geonames.code.countryCode .. " " .. handler.root.geonames.code.adminName1 .. " " .. handler.root.geonames.code.adminName2 .. ") の最寄りのすき家は見つけられませんでした・・・。"
+        local ret = "ごめんなさい・・・。 "..placename .. "(" .. location .. ") の最寄りのすき家は見つけられませんでした・・・。"
         return {1, ret}
     end
 end
