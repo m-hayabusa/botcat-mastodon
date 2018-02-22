@@ -12,6 +12,8 @@ client.on('connectFailed', function(error) {
 
 client.on('connect', function(connection) {
     console.log('WebSocket Client Connected');
+                                    post(":googlecat:​ 起動したにゃ");
+
     connection.on('error', function(error) {
         console.log("Connection Error: " + error.toString());
     });
@@ -76,7 +78,7 @@ client.on('connect', function(connection) {
                         } else {
                             if (acct === config.admin) {
                                 if (text.match(/!start/i) || text.match(/(猫Bot|ねこぼっと)(起動|おきて|起きて)/i)) {
-                                    post("起動したにゃ");
+                                    post(":googlecat:​ 起動したにゃ");
                                     change_running(1);
                                 }
                             }
