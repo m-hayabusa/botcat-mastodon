@@ -3,6 +3,8 @@ let eti = 0;
 let config = require('./config');
 let fetch = require('node-fetch');
 
+let Filledknzk = {depth:null, dead_mode: null};
+
 let WebSocketClient = require('websocket').client;
 let client = new WebSocketClient();
 
@@ -12,7 +14,7 @@ client.on('connectFailed', function(error) {
 
 client.on('connect', function(connection) {
     console.log('WebSocket Client Connected');
-                                    post(":googlecat:​ 起動したにゃ");
+                                    // post(":googlecat:​ 起動したにゃ");
 
     connection.on('error', function(error) {
         console.log("Connection Error: " + error.toString());
@@ -46,12 +48,70 @@ client.on('connect', function(connection) {
                             text = text.replace(/<("[^"]*"|'[^']*'|[^'">])*>/g,"");
                             let regStart = /(@cat |(猫|ねこ|Cat)(Bot|ぼっと))、?/i
 
+                            //最後にあかりたそに埋められた神崎おにいさん
+                             if (acct == "yuzu") { // yuzu(@knzk.me): あかりたそ
+                                 if (json['spoiler_text'].match(/ｺﾞｺﾞｺﾞｺﾞｺﾞｺﾞ.../i)) {
+                                     Filledknzk.depth = text.replace(/^.*?を埋めたら/,"").replace(/メートルぐらい.*?$/,"");;
+                                     if (text.match(/マグマに落ちちゃった/)){
+                                         Filledknzk.dead_mode = "lava";
+                                         Filledknzk.depth = null;
+                                     }else if (text.match(/溺れちゃった/)) {
+                                         Filledknzk.dead_mode = "water";
+                                     }else{
+                                         Filledknzk.dead_mode = null;
+                                     }
+                                     // post("あかりたそが神崎おにいさんを埋めました: 深さ " + Filledknzk.depth+ "\t死因 "+ Filledknzk.dead_mode);
+                                     console.log("あかりたそが神崎おにいさんを埋めました: 深さ " + Filledknzk.depth+ "\t死因 "+ Filledknzk.dead_mode);
+                                 }
+                             }
+
                              //メイン部分
                              if (text.match(regStart)) {
                                 rt(json['id']);
                                 fav(json['id']);
 
                                 text = text.replace(regStart,"");
+
+                                if (text.match(/(掘り)/i)) {
+                                    if (text.match(/(神崎|おにいさん|お兄さん)/i)) {
+                                        let name = "knzk";
+                                        let diggedDepth = (Math.floor( Math.random() * (30) ) + 1);
+                                        console.log("神崎おにいさんを掘り出します: " + "深さは" + Filledknzk.depth + "\t死因は" +Filledknzk.dead_mode);
+
+                                        if (!Filledknzk.depth) {
+                                            Filledknzk.depth = null;
+                                        }
+
+                                        let talktext = "@"+acct+" と一緒に";
+                                        if (Filledknzk.depth < diggedDepth) {
+                                            talktext += Filledknzk.depth + "mぐらい掘って､";
+                                            if(Filledknzk.dead_mode == "water"){
+                                                talktext += "水の中からおにいさんをみつけたにゃ！\n溺れちゃってたけど・・・";
+                                            } else if(Filledknzk.dead_mode == "lava"){
+                                                talktext += "おにいさんを掘り出そうとして"+diggedDepth+"mぐらい掘ってみたけど､"
+                                                talktext += "溶岩が出てきちゃったから諦めたにゃ…｡";
+                                            } else {
+                                                talktext += "岩の中からおにいさんをみつけたにゃ！";
+                                            }
+                                        } else {
+                                            talktext += "おにいさんを掘り出そうとして"+diggedDepth+"mぐらい掘ってみたけど､";
+                                            talktext += "見つからなかったにゃ…｡";
+                                        }
+
+                                        post(talktext +"\n\n\n"+horihori(Filledknzk.depth, name, Filledknzk.dead_mode, diggedDepth), {cw: "うみゃみゃみゃーっ！"});
+                                        console.log(talktext);
+
+                                        Filledknzk.depth = null;
+                                        let rand_dead = Math.floor( Math.random() * 21 );
+                                        if (rand_dead > 15) {
+                                            Filledknzk.dead_mode = "lava";
+                                        } else if (rand_dead > 10) {
+                                            Filledknzk.dead_mode = "water";
+                                        } else {
+                                            Filledknzk.dead_mode = null;
+                                        }
+                                    }
+                                }
 
                                 let regNearest = /(の最寄り|から(一|1|１)番近い|から近い).*$/i
                                 if (text.match(regNearest)) {
@@ -175,6 +235,65 @@ function post(value, option = {}, visibility = "public", force) {
             console.warn("NG:POST:SERVER");
         });
     }
+}
+
+function horihori(depth, name, dead_mode, diggedDepth) {
+    console.log(depth + " " + name + " " + dead_mode + " " + diggedDepth);
+    let res = "", is_bedrock = false, i = 0, block = "";
+
+    if (depth > 28 || diggedDepth > 28) is_bedrock = true;
+
+    depth -= 3;
+    diggedDepth -= 3;
+
+    if (!depth) depth = diggedDepth;
+    
+    if (depth && diggedDepth >= depth) {
+        res += "　​"+name+"\n";
+        // res += ":minecraft_dirt:​:minecraft_dirt:​+"name"+​:minecraft_dirt:​:minecraft_dirt:\n";
+    }
+    if (diggedDepth != 0) {
+        res += ":minecraft_dirt:​:minecraft_dirt:​　​:minecraft_dirt:​:minecraft_dirt:\n";
+    } else {
+        res += ":minecraft_dirt:​:minecraft_dirt:​:minecraft_dirt:​​:minecraft_dirt:​:minecraft_dirt:\n";
+    }
+
+    while (i <= depth) {
+        if (i <= diggedDepth){
+            res += ":minecraft_stone:​:minecraft_stone:​　​:minecraft_stone:​:minecraft_stone:\n";
+        } else {
+            res += ":minecraft_stone:​:minecraft_stone:​:minecraft_stone:​:minecraft_stone:​:minecraft_stone:\n";
+        }
+        i++;
+    }
+
+    if (dead_mode === "lava") block = "minecraft_lava";
+    else if (dead_mode === "water") block = "minecraft_water";
+
+    if (depth || depth > diggedDepth) {
+        if (dead_mode === "lava") {
+            res += ":"+block+":​:"+block+":​:"+block+":​:"+block+":​:"+block+":\n";
+            res += ":"+block+":​:"+block+":​:"+block+":​:"+block+":​:"+block+":";
+        } else if (dead_mode === "water") {
+            res += ":"+block+":​:"+block+":​"+"　"+"​:"+block+":​:"+block+":\n";
+            res += ":"+block+":​:"+block+":​:"+block+":​:"+block+":​:"+block+":";
+        } else {
+            res += ":minecraft_stone:​:minecraft_stone:​"+"　"+"​:minecraft_stone:​:minecraft_stone:\n";
+            res += is_bedrock ? ":minecraft_bedrock:​:minecraft_bedrock:​:minecraft_bedrock:​:minecraft_bedrock:​:minecraft_bedrock:" : ":minecraft_stone:​:minecraft_stone:​:minecraft_stone:​:minecraft_stone:​:minecraft_stone:";
+        }
+    } else {
+        if (dead_mode === "lava") {
+            res += ":"+block+":​:"+block+":​:"+block+":​:"+block+":​:"+block+":\n";
+            res += ":"+block+":​:"+block+":​:"+block+":​:"+block+":​:"+block+":";
+        } else if (dead_mode === "water") {
+            res += ":"+block+":​:"+block+":​:"+name +":​:"+block+":​:"+block+":\n";
+            res += ":"+block+":​:"+block+":​:"+block+":​:"+block+":​:"+block+":";
+        } else {
+            res += ":minecraft_stone:​:minecraft_stone:​:"+name+":​:minecraft_stone:​:minecraft_stone:\n";
+            res += is_bedrock ? ":minecraft_bedrock:​:minecraft_bedrock:​:minecraft_bedrock:​:minecraft_bedrock:​:minecraft_bedrock:" : ":minecraft_stone:​:minecraft_stone:​:minecraft_stone:​:minecraft_stone:​:minecraft_stone:";
+        }
+    }
+    return res;
 }
 
 function change_running(mode) {
