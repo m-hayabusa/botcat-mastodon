@@ -17,3 +17,5 @@ vi config.js # トークンなど
 npm install
 node main.js
 ```
+
+https://github.com/yuzulabo/AkariBot.git から分岐しています
